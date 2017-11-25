@@ -5,8 +5,10 @@ DengAI: Predicting Disease Spread
 ## City and date indicators
 
 - city – City abbreviations: sj for San Juan and iq for Iquitos
-week_start_date – Date given in yyyy-mm-dd format
-NOAA's GHCN daily climate data weather station measurements
+- week_start_date – Date given in yyyy-mm-dd format
+
+## NOAA's GHCN daily climate data weather station measurements
+
 - station_max_temp_c – Maximum temperature
 - station_min_temp_c – Minimum temperature
 - station_avg_temp_c – Average temperature
@@ -29,6 +31,7 @@ NOAA's NCEP Climate Forecast System Reanalysis measurements (0.5x0.5 degree scal
 - reanalysis_tdtr_k – Diurnal temperature range
 
 ## Satellite vegetation - Normalized difference vegetation index (NDVI) - NOAA's CDR Normalized Difference Vegetation Index (0.5x0.5 degree scale) measurements
+
 - ndvi_se – Pixel southeast of city centroid
 - ndvi_sw – Pixel southwest of city centroid
 - ndvi_ne – Pixel northeast of city centroid

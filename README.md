@@ -4,7 +4,7 @@
 
 ## City and date indicators
 
-- city – City abbreviations: sj for San Juan and iq for Iquitos
+- city – City abbreviations: sj for San Juan, Puerto Rico (pop. 395326) and iq for Iquitos, Peru (pop. 471993)
 - week_start_date – Date given in yyyy-mm-dd format
 
 ## NOAA's GHCN daily climate data weather station measurements

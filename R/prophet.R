@@ -6,6 +6,7 @@ library(viridis)
 library(glue)
 library(rlang)
 library(prophet)
+library(Metrics)
 
 #' Import data
 dengue_features <- read_csv("data/dengue_features_train.csv")
@@ -33,6 +34,7 @@ dengue_nested <- dengue_imputed %>%
            city == "iq" ~ 471993
          ),
          floor = 0) %>%
+  mutate_at(4:23, scale) %>% 
   group_by(city) %>% 
   nest() %>% 
   mutate(train = map(data, ~ .x[1:(nrow(.x) - 101),]),
@@ -50,12 +52,12 @@ seasons <- dengue_nested %>%
             SD = sd(value))
 
 #' Seasonality plot
-seasons %>% 
-  ggplot(aes(week_of_year, Mean, color = city, group = city)) +
-  geom_line() +
-  geom_ribbon(aes(ymin = Mean - SD, ymax = Mean + SD), alpha = 0.2) +
-  facet_wrap(~ key, scales = "free") +
-  scale_color_viridis(discrete = TRUE)
+# seasons %>% 
+#   ggplot(aes(week_of_year, Mean, color = city, group = city)) +
+#   geom_line() +
+#   geom_ribbon(aes(ymin = Mean - SD, ymax = Mean + SD), alpha = 0.2) +
+#   facet_wrap(~ key, scales = "free") +
+#   scale_color_viridis(discrete = TRUE)
 
 # Dengai ------------------------------------------------------------------
 
@@ -66,7 +68,7 @@ dengue_nested <- dengue_nested %>%
                    weekly.seasonality = FALSE,
                    daily.seasonality = FALSE,
                    growth = 'logistic',
-                   seasonality.prior.scale = 400,
+                   seasonality.prior.scale = 500,
                    changepoint.prior.scale = 1,
                    # mcmc.samples = 4,
                    # uncertainty.samples = 4000,
@@ -77,7 +79,11 @@ dengue_nested <- dengue_nested %>%
 regressors <- dengue_nested$train[[1]] %>% 
   colnames() %>% 
   setdiff(c("y", "ds", "cap", "floor"))
-args_add_reg <- map(regressors, ~ quo(map(mod, add_regressor, name = !! .x))) %>% 
+args_add_reg <- map(regressors, ~ quo(map(mod, 
+                                          add_seasonality, 
+                                          name = !! .x, 
+                                          period = 365, 
+                                          fourier.order = 1))) %>% 
   set_names(glue('mod_{regressors}'))
 dengue_nested <- dengue_nested %>% mutate(!!! args_add_reg)
 
@@ -98,25 +104,22 @@ test_unnested <- dengue_nested %>%
   select(city, ds, y)
 
 #' Calculate residuals
-dengeue_resid <- dengue_nested %>% 
+dengeue_joined <- dengue_nested %>% 
   select(city, ends_with("pred")) %>% 
   gather(key = model, value, -city) %>% 
   unnest() %>% 
   mutate(ds = ymd(ds)) %>% 
   select(city, model, ds, starts_with("yhat")) %>% 
-  left_join(test_unnested) %>% 
-  # mutate_at(vars(starts_with("y")), ~ exp(.x) - 1) %>%
-  mutate(resid = yhat - y)
+  left_join(test_unnested)
 
-#' RMSE
-dengeue_resid %>% 
-  group_by(city, model) %>% 
-  summarise(rmse = sqrt(sum(resid^2) / n())) %>% 
-  arrange(rmse) %>% 
-  top_n(5, 1 / rmse)
+#' MAE
+dengeue_joined %>%
+  group_by(model) %>%
+  summarise(MAE = mae(y, yhat)) %>% 
+  arrange(MAE)
 
 #' Plot predictions
-dengeue_resid %>% 
+dengeue_joined %>% 
   ggplot(aes(ds, yhat, group = model)) +
   geom_line() +
   geom_ribbon(aes(ymin = yhat_lower, ymax = yhat_upper), alpha = 0.1) +
